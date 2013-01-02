@@ -1,0 +1,18 @@
+<package>
+  <description brief="ncs_pr2_navigation">
+
+     Simple tool to make a PR2 navigate through a virtual environment in Gazebo given directions from the NCS brain simulator.
+
+  </description>
+  <author>Nathan Jordan</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ncs_pr2_navigation</url>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="gazebo_msgs"/>
+
+</package>
+
+
