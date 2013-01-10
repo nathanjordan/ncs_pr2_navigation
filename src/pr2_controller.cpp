@@ -35,6 +35,9 @@ const int QUADRANT_2 = 2;
 const int QUADRANT_3 = 3;
 const int QUADRANT_4 = 4;
 
+const float MAX_ROATION_VELOCITY = 1.5;
+const float MAX_LINEAR_VELOCITY  = 2.0;
+
 class pr2_navigation_tree
 {
 private:
@@ -51,6 +54,8 @@ private:
 	void moveToPoint(double x , double y );
 	float determineAngle(double x, double y);
 	int determineQuadrant(double x, double y);
+	float convertModelAngle(float angle);
+	float determineRotation(float desiredHeading, float currentHeading);
 
 public:
 
@@ -72,13 +77,7 @@ public:
 		while(true) 
 		{
 
-			cmd.angular.z = 0.0;
-
-			//cmd.linear.y = 1.0;
-
-			vel_pub_.publish(cmd);
-
-			moveToPoint(-13.0,10.0);
+			moveToPoint(10.0,-5.0);
 
 			updateModelState();
 		}
@@ -130,9 +129,11 @@ void pr2_navigation_tree::updateModelState() {
 
 			ez = atan2( 2 * (x*w + y*z) , 1 - 2*( pow(z,2) + pow(w,2) ) );
 
+			heading = convertModelAngle(ex);
+
 			//printf("x: %f \n",modelState_.pose.position.x);
 			//printf("y: %f \n",modelState_.pose.position.y);
-			ROS_INFO("roll : %f",ex);
+			//ROS_INFO("roll : %f",ex);
 
 			//signal(SIGINT,quit);
 
@@ -171,7 +172,23 @@ void pr2_navigation_tree::moveToPoint(double x, double y)
 	
 	float theta = determineAngle(x,y);
 	
-	ROS_INFO("theta: %f", theta);
+	float rotation = determineRotation( theta, heading );
+	
+	float angularVelocity = (rotation / PI) * MAX_ROATION_VELOCITY;
+	
+	cmd.angular.z = angularVelocity;
+	
+	//if( abs(rotation) < 0.01 )
+	
+	//	cmd.linear.x = 1.0;
+
+	vel_pub_.publish(cmd);
+	
+	ROS_INFO("current : %f", heading);
+	
+	ROS_INFO("desired : %f", theta);
+	
+	ROS_INFO("rotation: %f", rotation);
 
 }
 
@@ -190,19 +207,19 @@ float pr2_navigation_tree::determineAngle(double x, double y)
 	
 	if(quadrant == QUADRANT_1)
 		
-		return (PI / 2) + atan( y / x );
+		return atan( y / x );
 	
 	else if(quadrant == QUADRANT_2)
 	
-		return -PI + atan( -x / y );
+		return (PI / 2) + atan( -x / y );
 		
 	else if(quadrant == QUADRANT_3)
 	
-		return -(PI / 2) + atan( -y / -x );
+		return PI + atan( -y / -x );
 	
 	else if(quadrant == QUADRANT_4)
 	
-		return 0 + atan( x / -y );
+		return (3 * PI / 2) + atan( x / -y );
 
 }
 
@@ -227,7 +244,33 @@ int pr2_navigation_tree::determineQuadrant(double x, double y)
 	
 }
 
+float pr2_navigation_tree::convertModelAngle(float angle)
+{
+	if( angle < 0 )
+		
+		return 2 * PI + angle;
+	
+	else
+	
+		return angle;
+}
 
+float pr2_navigation_tree::determineRotation(float desiredHeading, float currentHeading)
+{
+		
+	float shortest = desiredHeading - currentHeading;
+	
+	if( shortest > PI )
+	
+		shortest -= 2 * PI;
+		
+	if( shortest < -PI )
+	
+		shortest += 2 * PI;
+		
+	return shortest;
+	
+}
 
 
 
