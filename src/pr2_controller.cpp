@@ -27,6 +27,14 @@
 #include <termios.h>
 //#include <boost/asio.hpp>
 
+
+#define PI 3.14159265359
+
+const int QUADRANT_1 = 1;
+const int QUADRANT_2 = 2;
+const int QUADRANT_3 = 3;
+const int QUADRANT_4 = 4;
+
 class pr2_navigation_tree
 {
 private:
@@ -41,42 +49,40 @@ private:
 
 	void updateModelState();
 	void moveToPoint(double x , double y );
+	float determineAngle(double x, double y);
+	int determineQuadrant(double x, double y);
 
 public:
 
-  void init()
-  {
-    cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
+	void init()
+	{
+		cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
 
-    vel_pub_ = n_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+		vel_pub_ = n_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
 
-    modelStateClient = n_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
+		modelStateClient = n_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
 
-    modelStateRequest_.request.model_name = "pr2";
+		modelStateRequest_.request.model_name = "pr2";
 
-    heading = 0.0;
+		heading = 0.0;
+	}
 
-  }
+	void nav_loop() 
+	{
+		while(true) 
+		{
 
-  void nav_loop() {
+			cmd.angular.z = 0.0;
 
-	  while(true) {
+			//cmd.linear.y = 1.0;
 
-		  //cmd.linear.x = 0.5;
+			vel_pub_.publish(cmd);
 
-		  //vel_pub_.publish(cmd);
+			moveToPoint(-13.0,10.0);
 
-		  //moveToPoint(10,10);
-
-		  //break;
-
-		  updateModelState();
-
-
-
-	  	  }
-
-  }
+			updateModelState();
+		}
+	}
 
 };
 
@@ -85,7 +91,7 @@ struct termios cooked, raw;
 
 void quit(int sig)
 {
-
+	
 	tcsetattr(kfd, TCSANOW, &cooked);
 	exit(0);
 }
@@ -97,7 +103,7 @@ int main(int argc, char** argv)
 	pr2_navigation_tree pr2_tree;
 	pr2_tree.init();
 
-	signal(SIGINT,quit);
+	//signal(SIGINT,quit);
 
 	pr2_tree.nav_loop();
 
@@ -126,7 +132,7 @@ void pr2_navigation_tree::updateModelState() {
 
 			//printf("x: %f \n",modelState_.pose.position.x);
 			//printf("y: %f \n",modelState_.pose.position.y);
-			//printf("roll : %f \n",ex);
+			ROS_INFO("roll : %f",ex);
 
 			//signal(SIGINT,quit);
 
@@ -134,7 +140,7 @@ void pr2_navigation_tree::updateModelState() {
 
 		else {
 
-			ROS_ERROR("Failed to get model info! Is the PR2 running in gazebo?");
+			ROS_ERROR("Failed to get model info! Is the PR2 running in gazebo? [roslaunch pr2_gazebo pr2.launch]");
 
 			signal(SIGINT,quit);
 
@@ -145,13 +151,89 @@ void pr2_navigation_tree::updateModelState() {
 void pr2_navigation_tree::moveToPoint(double x, double y)
 {
 
-	geometry_msgs::Point destination(-20,-13,0);
+	geometry_msgs::Point destination;
+	
+	destination.x = x;
+	
+	destination.y = y;
+	
+	destination.z = 0.0;
 
 	geometry_msgs::Point location = modelState_.pose.position;
 
-	geometry_msgs::Point travelVector = destination - location;
-
-	cmd.angular.z = 1.0;
-
+	geometry_msgs::Point travelVector;
+	
+	travelVector.x = destination.x - location.x;
+	
+	travelVector.y = destination.y - location.y;
+	
+	travelVector.z = destination.z - location.z;
+	
+	float theta = determineAngle(x,y);
+	
+	ROS_INFO("theta: %f", theta);
 
 }
+
+float pr2_navigation_tree::determineAngle(double x, double y)
+{
+	
+	int quadrant = determineQuadrant(x,y);
+	
+	//ROS_INFO("quad : %i",quadrant);
+	
+	//ROS_INFO("pi  : %f",PI);
+	
+	//ROS_INFO("x,y : %f,%f",x,y);
+	
+	//ROS_INFO("asin : %f",atan( -x / y ));
+	
+	if(quadrant == QUADRANT_1)
+		
+		return (PI / 2) + atan( y / x );
+	
+	else if(quadrant == QUADRANT_2)
+	
+		return -PI + atan( -x / y );
+		
+	else if(quadrant == QUADRANT_3)
+	
+		return -(PI / 2) + atan( -y / -x );
+	
+	else if(quadrant == QUADRANT_4)
+	
+		return 0 + atan( x / -y );
+
+}
+
+int pr2_navigation_tree::determineQuadrant(double x, double y)
+{
+	//TODO: Special cases of angles 0, pi/2, -pi, and -pi/2
+	if( x > 0 && y > 0)
+		
+		return QUADRANT_1;
+	
+	else if( x < 0 && y > 0 )
+	
+		return QUADRANT_2;
+		
+	else if( x < 0 && y < 0 )
+	
+		return QUADRANT_3;
+		
+	else if( x > 0 && y < 0 )
+	
+		return QUADRANT_4;
+	
+}
+
+
+
+
+
+
+
+
+
+
+
