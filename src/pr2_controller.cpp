@@ -174,14 +174,22 @@ void pr2_navigation_tree::moveToPoint(double x, double y)
 	
 	float rotation = determineRotation( theta, heading );
 	
-	float angularVelocity = (rotation / PI) * MAX_ROATION_VELOCITY;
+	float distance = sqrt( pow(travelVector.x,2) + pow(travelVector.y , 2) );
 	
+	float angularVelocity = (rotation / PI) * MAX_ROATION_VELOCITY;
+
 	cmd.angular.z = angularVelocity;
 	
-	//if( abs(rotation) < 0.01 )
+	float absrotation = ( rotation < 0 ) ? -rotation : rotation;
 	
-	//	cmd.linear.x = 1.0;
-
+	if( absrotation < 0.01 && distance > 1.0 )
+	
+		cmd.linear.x = 1.0;
+		
+	else 
+		
+		cmd.linear.x = 0.0;
+	
 	vel_pub_.publish(cmd);
 	
 	ROS_INFO("current : %f", heading);
