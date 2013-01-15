@@ -1,0 +1,76 @@
+/*
+ * PointReader.h
+ *
+ *  Created on: Jul 10, 2012
+ *      Author: njordan
+ */
+
+#ifndef POINTREADER_H_
+#define POINTREADER_H_
+
+#include <string>
+
+class NavigationPoint;
+
+/////////////////////////////////////////////////////////////////////////////////////
+////   OrderedPair Struct
+/////////////////////////////////////////////////////////////////////////////////////
+
+struct OrderedPair {
+
+	float x,y;
+
+	};
+
+/////////////////////////////////////////////////////////////////////////////////////
+////   PointReader Class
+/////////////////////////////////////////////////////////////////////////////////////
+
+class NavigationTree {
+
+public:
+
+	//// Functions ////
+
+	void readFile( std::string );
+
+	//// Properties ////
+
+	void reset();
+
+	OrderedPair* getLeft();
+	OrderedPair* getRight();
+
+private:
+
+	NavigationPoint* root;
+
+	NavigationPoint* current;
+
+	};
+
+/////////////////////////////////////////////////////////////////////////////////////
+////   Point Class
+/////////////////////////////////////////////////////////////////////////////////////
+
+class NavigationPoint {
+
+public:
+
+	int label;
+
+	bool endpoint;
+
+	NavigationPoint* left;
+
+	NavigationPoint* right;
+
+	float x, z;
+
+	int leftLabel, rightLabel;
+
+	};
+
+
+
+#endif /* POINTREADER_H_ */
