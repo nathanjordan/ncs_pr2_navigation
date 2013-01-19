@@ -23,8 +23,14 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #common commands for building c++ executables and libraries
 rosbuild_add_library(NavigationTree src/NavigationTree.cpp)
+rosbuild_add_library(GPSController src/GPSController.cpp)
+rosbuild_add_library(NCSDirectionInterface src/NCSDirectionInterface.cpp)
+rosbuild_add_library(KeyboardDirectionInterface src/KeyboardDirectionInterface.cpp)
 #rosbuild_add_boost_directories()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
-rosbuild_add_executable(pr2_controller src/pr2_controller.cpp)
-target_link_libraries(pr2_controller NavigationTree)
+rosbuild_add_executable(ncs_pr2_navigation src/ncs_pr2_navigation.cpp)
+target_link_libraries(GPSController NavigationTree)
+target_link_libraries(GPSController NCSDirectionInterface)
+target_link_libraries(GPSController KeyboardDirectionInterface)
+target_link_libraries(ncs_pr2_navigation GPSController)
 
