@@ -65,7 +65,7 @@ public:
 
 	NavigationPoint* right;
 
-	float x, z;
+	float x, y;
 
 	int leftLabel, rightLabel;
 

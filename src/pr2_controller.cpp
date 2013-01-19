@@ -1,22 +1,34 @@
 /*
  * listener.cpp
  *
- *  Created on: Sep 20, 2012
- *      Author: njordan
+ *  Created on: January 18, 2013
+ *      Author: Nathan Jordan
+ *       Email: natedagreat27274@gmail.com
+ *
  */
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////    Includes
+////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include "ros/ros.h"
+#include <ros/ros.h>
 
-#include "std_msgs/String.h"
+#include <std_msgs/String.h>
 
-#include "gazebo_msgs/GetModelState.h"
+#include <gazebo_msgs/GetModelState.h>
+#include <gazebo_msgs/SetModelState.h>
 
-#include "geometry_msgs/Pose.h"
-#include "geometry_msgs/Point.h"
-#include "geometry_msgs/Twist.h"
-#include "geometry_msgs/Vector3.h"
-#include "geometry_msgs/Twist.h"
+#include <gazebo_msgs/ModelState.h>
+
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Vector3.h>
+#include <geometry_msgs/Twist.h>
+
+#include "../include/NavigationTree.h"
 
 #include <math.h>
 #include <sstream>
@@ -25,30 +37,65 @@
 #include <unistd.h>
 #include <signal.h>
 #include <termios.h>
-//#include <boost/asio.hpp>
+#include <stdio.h>
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////    Macros
+////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define PI 3.14159265359
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////    Constants
+////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 const int QUADRANT_1 = 1;
 const int QUADRANT_2 = 2;
 const int QUADRANT_3 = 3;
 const int QUADRANT_4 = 4;
 
-const float MAX_ROATION_VELOCITY = 1.5;
-const float MAX_LINEAR_VELOCITY  = 2.0;
+const char INPUT_LEFT = 'l';
+const char INPUT_RIGHT = 'r';
+
+const float MAX_ANGULAR_VELOCITY = 4.0;
+const float MAX_LINEAR_VELOCITY  = 1.5;
+const float DISTANCE_WINDOW = 0.3;
+const float ROTATION_WINDOW = 0.01;
+
+const std::string MODEL_NAME = "pr2";
+const std::string INPUT_FILE_LOCATION = "/home/njordan/fuerte_workspace/ncs_pr2_navigation/input/sample.txt";
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+////
+////    Main
+////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 class pr2_navigation_tree
 {
 private:
 
 	geometry_msgs::Twist cmd;
-	ros::NodeHandle n_;
+	
 	ros::Publisher vel_pub_;
-	gazebo_msgs::GetModelState modelStateRequest_;
+	
+	gazebo_msgs::SetModelState setModelStateRequest_;
+	gazebo_msgs::GetModelState getModelStateRequest_;
 	gazebo_msgs::GetModelStateResponse modelState_;
-	ros::ServiceClient modelStateClient;
+	
+	ros::ServiceClient getModelStateClient_;
+	ros::ServiceClient setModelStateClient_;
+	
+	ros::NodeHandle n_;
+	
+	NavigationTree navTree;
+	
 	float heading;
+	bool moving;
 
 	void updateModelState();
 	void moveToPoint(double x , double y );
@@ -56,28 +103,95 @@ private:
 	int determineQuadrant(double x, double y);
 	float convertModelAngle(float angle);
 	float determineRotation(float desiredHeading, float currentHeading);
+	void resetModel();
 
 public:
 
 	void init()
 	{
+		
+		heading = 0.0;
+		
+		//Set up movement parameters
 		cmd.linear.x = cmd.linear.y = cmd.angular.z = 0;
 
 		vel_pub_ = n_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+		
+		//set up model state stuff
+		getModelStateClient_ = n_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
+		
+		getModelStateRequest_.request.model_name = MODEL_NAME;
+		
+		//The following is used for resetting the robot at 0,0
+		setModelStateClient_ = n_.serviceClient<gazebo_msgs::SetModelState>("gazebo/set_model_state");
+		
+		moving = false;
 
-		modelStateClient = n_.serviceClient<gazebo_msgs::GetModelState>("gazebo/get_model_state");
+		geometry_msgs::Pose start_pose;
+		start_pose.position.x = 0.0;
+		start_pose.position.y = 0.0;
+		start_pose.position.z = 0.0;
+		start_pose.orientation.x = 0.0;
+		start_pose.orientation.y = 0.0;
+		start_pose.orientation.z = 0.0;
+		start_pose.orientation.w = 0.0;
 
-		modelStateRequest_.request.model_name = "pr2";
-
-		heading = 0.0;
+		geometry_msgs::Twist start_twist;
+		start_twist.linear.x = 0.0;
+		start_twist.linear.y = 0.0;
+		start_twist.linear.z = 0.0;
+		start_twist.angular.x = 0.0;
+		start_twist.angular.y = 0.0;
+		start_twist.angular.z = 0.0;
+		
+		gazebo_msgs::ModelState modelState;
+		
+		modelState.model_name = MODEL_NAME;
+		modelState.pose = start_pose;
+		modelState.twist = start_twist;
+		
+		setModelStateRequest_.request.model_state = modelState;
+		
+		//load the point tree
+		navTree.readFile(INPUT_FILE_LOCATION);
 	}
 
 	void nav_loop() 
 	{
+		char input;
+		
+		OrderedPair* p;
+		
 		while(true) 
 		{
+			
+			if( !moving )
+			{
+				//TODO: Socket code for recieving 'left' or 'right' response from the NCS Brain Simulator
+				input = 'r';
 
-			moveToPoint(10.0,-5.0);
+				if( input == INPUT_LEFT )
+				
+					p = navTree.getLeft();
+
+				if( input == INPUT_RIGHT )
+				
+					p = navTree.getRight();
+
+				if( p == 0 )
+				{
+
+					resetModel();
+
+					continue;
+				
+				}
+
+				ROS_INFO("Moving to point (%f,%f)" , p->x , p->y );
+
+			}
+
+			moveToPoint( p->x , p->y );
 
 			updateModelState();
 		}
@@ -111,41 +225,37 @@ int main(int argc, char** argv)
 
 void pr2_navigation_tree::updateModelState() {
 
-	if (modelStateClient.call(modelStateRequest_)) {
+	if (getModelStateClient_.call(getModelStateRequest_))
+	{
 
-			modelState_ = modelStateRequest_.response;
+		modelState_ = getModelStateRequest_.response;
 
-			float x,y,z,w;
-			float ex,ey,ez;
+		float x,y,z,w;
+		float ex,ey,ez;
 
-			x = modelState_.pose.orientation.x;
-			y = modelState_.pose.orientation.y;
-			z = modelState_.pose.orientation.z;
-			w = modelState_.pose.orientation.w;
+		x = modelState_.pose.orientation.x;
+		y = modelState_.pose.orientation.y;
+		z = modelState_.pose.orientation.z;
+		w = modelState_.pose.orientation.w;
 
-			ex = atan2( 2 * (x*y + z*w) , 1 - 2*( pow(y,2) + pow(z,2) ) );
+		ex = atan2( 2 * (x*y + z*w) , 1 - 2*( pow(y,2) + pow(z,2) ) );
 
-			ey = asin( 2 * ( x*z - w*y ) );
+		ey = asin( 2 * ( x*z - w*y ) );
 
-			ez = atan2( 2 * (x*w + y*z) , 1 - 2*( pow(z,2) + pow(w,2) ) );
+		ez = atan2( 2 * (x*w + y*z) , 1 - 2*( pow(z,2) + pow(w,2) ) );
 
-			heading = convertModelAngle(ex);
+		heading = convertModelAngle(ex);
 
-			//printf("x: %f \n",modelState_.pose.position.x);
-			//printf("y: %f \n",modelState_.pose.position.y);
-			//ROS_INFO("roll : %f",ex);
+	}
 
-			//signal(SIGINT,quit);
+	else
+	{
 
-			}
+		ROS_ERROR("Failed to get model info! Is the PR2 running in gazebo? [roslaunch pr2_gazebo pr2.launch]");
 
-		else {
+		signal(SIGINT,quit);
 
-			ROS_ERROR("Failed to get model info! Is the PR2 running in gazebo? [roslaunch pr2_gazebo pr2.launch]");
-
-			signal(SIGINT,quit);
-
-		  }
+	}
 
 }
 
@@ -170,48 +280,43 @@ void pr2_navigation_tree::moveToPoint(double x, double y)
 	
 	travelVector.z = destination.z - location.z;
 	
-	float theta = determineAngle(x,y);
+	float theta = determineAngle(travelVector.x,travelVector.y);
 	
 	float rotation = determineRotation( theta, heading );
 	
 	float distance = sqrt( pow(travelVector.x,2) + pow(travelVector.y , 2) );
 	
-	float angularVelocity = (rotation / PI) * MAX_ROATION_VELOCITY;
-
-	cmd.angular.z = angularVelocity;
-	
 	float absrotation = ( rotation < 0 ) ? -rotation : rotation;
 	
-	if( absrotation < 0.01 && distance > 1.0 )
+	float angularVelocity = (rotation / PI) * MAX_ANGULAR_VELOCITY;
+
+	cmd.angular.z = angularVelocity;
+
+	if( absrotation < ROTATION_WINDOW && distance > DISTANCE_WINDOW )
 	
-		cmd.linear.x = 1.0;
+		cmd.linear.x = MAX_LINEAR_VELOCITY;
 		
-	else 
+	else
 		
 		cmd.linear.x = 0.0;
 	
+	if( distance > DISTANCE_WINDOW )
+
+		moving = true;
+
+	else
+
+		moving = false;
+
+
 	vel_pub_.publish(cmd);
 	
-	ROS_INFO("current : %f", heading);
-	
-	ROS_INFO("desired : %f", theta);
-	
-	ROS_INFO("rotation: %f", rotation);
-
 }
 
 float pr2_navigation_tree::determineAngle(double x, double y)
 {
 	
 	int quadrant = determineQuadrant(x,y);
-	
-	//ROS_INFO("quad : %i",quadrant);
-	
-	//ROS_INFO("pi  : %f",PI);
-	
-	//ROS_INFO("x,y : %f,%f",x,y);
-	
-	//ROS_INFO("asin : %f",atan( -x / y ));
 	
 	if(quadrant == QUADRANT_1)
 		
@@ -234,6 +339,8 @@ float pr2_navigation_tree::determineAngle(double x, double y)
 int pr2_navigation_tree::determineQuadrant(double x, double y)
 {
 	//TODO: Special cases of angles 0, pi/2, -pi, and -pi/2
+	//       Mitigated by adding a small epsilon value to points in NavigationTree class
+
 	if( x > 0 && y > 0)
 		
 		return QUADRANT_1;
@@ -250,6 +357,15 @@ int pr2_navigation_tree::determineQuadrant(double x, double y)
 	
 		return QUADRANT_4;
 	
+	else
+	{
+
+		ROS_ERROR("Invalid quadrant determined, possibly a special case issue, aborting");
+
+		signal(SIGINT,quit);
+
+	}
+
 }
 
 float pr2_navigation_tree::convertModelAngle(float angle)
@@ -278,6 +394,22 @@ float pr2_navigation_tree::determineRotation(float desiredHeading, float current
 		
 	return shortest;
 	
+}
+
+void pr2_navigation_tree::resetModel()
+{
+	navTree.reset();
+	
+	cmd.linear.x = 0.0;
+	
+	cmd.angular.z = 0.0;
+	
+	vel_pub_.publish(cmd);
+	
+	setModelStateClient_.call(setModelStateRequest_);
+	
+	ROS_INFO("Model Reset");
+
 }
 
 

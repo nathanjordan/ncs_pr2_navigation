@@ -5,16 +5,23 @@
  *      Author: njordan
  */
 
-#include "PointReader.h"
+#include "../include/NavigationTree.h"
+
+#include <ros/ros.h>
+
+#include <std_msgs/String.h>
+
 #include <fstream>
 #include <stdlib.h>
 #include <unistd.h>
 #include <vector>
 
+#define EPSILON 0.001
+
 void NavigationTree::readFile( std::string filename ) {
 
 	std::ifstream fin;
-	std::vector<Point*> pointList;
+	std::vector<NavigationPoint*> pointList;
 
 	std::string start;
 	int startPoint;
@@ -22,15 +29,23 @@ void NavigationTree::readFile( std::string filename ) {
 
 	fin.open( filename.c_str() );
 
-	if( !fin.good() )
+	if( !fin.good() ) {
+
+		ROS_INFO("Cannot open point tree file, aborting");
 
 		abort();
+
+	}
 
 	fin >> start;
 
-	if( start.compare( "START" ) != 0 )
+	if( start.compare( "START" ) != 0 ) {
+
+		ROS_INFO("Start element not found");
 
 		abort();
+
+		}
 
 	fin >> startPoint;
 
@@ -47,6 +62,11 @@ void NavigationTree::readFile( std::string filename ) {
 		fin >> p->x;
 
 		fin >> p->y;
+
+		//TODO: might be necessary for quadrants
+		p->x += EPSILON;
+
+		p->y += EPSILON;
 
 		if( endPoint == 'T' ) {
 
@@ -66,13 +86,16 @@ void NavigationTree::readFile( std::string filename ) {
 
 			}
 
-		else
+		else {
+
+			ROS_INFO("bad navigation file format");
 
 			abort();
 
+			}
 		}
 
-	std::vector<Point*>::iterator i,j;
+	std::vector<NavigationPoint*>::iterator i,j;
 
 	for( i = pointList.begin() ; i < pointList.end() ; i++ ) {
 
