@@ -39,7 +39,7 @@
           <geometry>
             <plane normal="0 0 1"/>
           </geometry>
-          <material script="Gazebo/White"/>
+          <material script="Gazebo/Gray"/>
         </visual>
       </link>
     </model>
@@ -61,13 +61,13 @@
       </link>
     </model>
     
-    <light type="point" name="light_1" cast_shadows="false">
+    <!--<light type="point" name="light_1" cast_shadows="false">
       <origin pose="0.0 0.0 10.0 0.0 0.0 0.0"/>
       <diffuse rgba="0.5 0.5 0.5 0.5"/>
       <attenuation range="1000.0" constant="0.01" quadratic="0.0001"/>
       <direction xyz="0 0 -1"/>
-      <!--<spot inner_angle="1.57" outer_angle="1.57" falloff="1.0" />-->
-    </light>
+      
+    </light>-->
     
     <!--<light type="point" name="my_light2" cast_shadows="false">
       <origin pose="0 0 10 0 0 0"/>
@@ -80,13 +80,13 @@
       <origin pose="0 0 10 0 0 0"/>
       <diffuse rgba="1 1 1 1"/>
       <specular rgba="1 1 1 1"/>
-      <attenuation range="50"/>
+      <attenuation range="50.0" constant="0.0"/>
       <direction xyz="0.05 0.1 -1"/>
     </light>
     
     <light type="directional" name="my_light2" cast_shadows="false">
       <origin pose="0 0 10 0 0 0"/>
-      <diffuse rgba="0.9 0.9 0.9 1"/>
+      <diffuse rgba="0.7 0.7 0.7 1"/>
       <specular rgba="1 1 1 1"/>
       <attenuation range="50"/>
       <direction xyz="1 0 0"/>
@@ -94,7 +94,7 @@
     
     <light type="directional" name="my_light3" cast_shadows="false">
       <origin pose="0 0 10 0 0 0"/>
-      <diffuse rgba="0.9 0.9 0.9 1"/>
+      <diffuse rgba="0.7 0.7 0.7 1"/>
       <specular rgba="1 1 1 1"/>
       <attenuation range="50"/>
       <direction xyz="-1 0 -1"/>
@@ -102,7 +102,7 @@
     
     <light type="directional" name="my_light4" cast_shadows="false">
       <origin pose="0 0 10 0 0 0"/>
-      <diffuse rgba="0.9 0.9 0.9 1"/>
+      <diffuse rgba="0.7 0.7 0.7 1"/>
       <specular rgba="1 1 1 1"/>
       <attenuation range="50"/>
       <direction xyz="0 1 0"/>
@@ -110,7 +110,7 @@
     
     <light type="directional" name="my_light5" cast_shadows="false">
       <origin pose="0 0 10 0 0 0"/>
-      <diffuse rgba="0.9 0.9 0.9 1"/>
+      <diffuse rgba="0.7 0.7 0.7 1"/>
       <specular rgba="1 1 1 1"/>
       <attenuation range="50"/>
       <direction xyz="0 -1 0"/>

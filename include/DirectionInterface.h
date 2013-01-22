@@ -12,6 +12,10 @@ class DirectionInterface {
 
 public:
 
+	static const char DIRECTION_LEFT = 'l';
+
+	static const char DIRECTION_RIGHT = 'r';
+
 	virtual char getDirection() = 0;
 
 	virtual ~DirectionInterface() { };

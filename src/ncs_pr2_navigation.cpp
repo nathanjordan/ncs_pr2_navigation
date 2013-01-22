@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 
 	KeyboardDirectionInterface* keyboardInterface = new KeyboardDirectionInterface();
 
-	controller.init(INPUT_FILE_LOCATION, ncsInterface);
+	controller.init(INPUT_FILE_LOCATION, keyboardInterface);
 
 	controller.ros_loop();
 
