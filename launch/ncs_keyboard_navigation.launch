@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="ncs_pr2_navigation" type="ncs_pr2_navigation" name="spawn_pr2_controller" output="screen">
+    <node pkg="ncs_pr2_navigation" type="KeyboardNavigation" name="ncs_navigation" output="screen">
       <remap from="cmd_vel" to="base_controller/command" />
 
       <!--<param name="walk_vel" value="0.5" />
