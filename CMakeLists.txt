@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 2.4.6)
+
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+include_directories(/opt/ros/fuerte/stacks/arm_navigation/arm_navigation_msgs/msg_gen/cpp/include/)
+include_directories(/opt/ros/fuerte/stacks/arm_navigation/arm_navigation_msgs/include/)
+include_directories(/opt/ros/fuerte/stacks/geometry/tf/include/)
+include_directories(/opt/ros/fuerte/stacks/bullet/include/)
+include_directories(/opt/ros/fuerte/stacks/arm_navigation/arm_navigation_msgs/srv_gen/cpp/include/)
+
+
+rosbuild_find_ros_package(actionlib_msgs)
+include(${actionlib_msgs_PACKAGE_PATH}/cmake/actionbuild.cmake)
+genaction()
 
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
@@ -26,13 +37,15 @@ rosbuild_add_library(NavigationTree src/NavigationTree.cpp)
 rosbuild_add_library(GPSController src/GPSController.cpp)
 rosbuild_add_library(NCSDirectionInterface src/NCSDirectionInterface.cpp)
 rosbuild_add_library(KeyboardDirectionInterface src/KeyboardDirectionInterface.cpp)
+rosbuild_add_library(ArmNavigation src/ArmNavigation.cpp)
 #rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
+rosbuild_link_boost(ArmNavigation thread)
 rosbuild_add_executable(NCSNavigation src/NCSNavigation.cpp)
 rosbuild_add_executable(KeyboardNavigation src/KeyboardNavigation.cpp)
+rosbuild_add_executable(CollisionMap src/CollisionMap.cpp)
 target_link_libraries(GPSController NavigationTree)
 target_link_libraries(GPSController NCSDirectionInterface)
 target_link_libraries(GPSController KeyboardDirectionInterface)
+target_link_libraries(GPSController ArmNavigation)
 target_link_libraries(NCSNavigation GPSController)
 target_link_libraries(KeyboardNavigation GPSController)
-

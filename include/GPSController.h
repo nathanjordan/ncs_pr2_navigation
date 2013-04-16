@@ -31,6 +31,7 @@
 
 #include "NavigationTree.h"
 #include "DirectionInterface.h"
+#include "ArmNavigation.h"
 
 #include <math.h>
 #include <sstream>

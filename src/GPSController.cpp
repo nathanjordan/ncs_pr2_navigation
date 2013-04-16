@@ -25,6 +25,8 @@
 void GPSController::init(std::string gpsfile , DirectionInterface* directionInterface)
 {
 
+	ArmNavigation arms;
+
 	//set direction interface implementation
 	directionInterface_ = directionInterface;
 
@@ -73,6 +75,9 @@ void GPSController::init(std::string gpsfile , DirectionInterface* directionInte
 
 	//load the point tree
 	navTree_.readFile(gpsfile);
+
+	//try arms
+	arms.setArmsHappy();
 }
 
 void GPSController::ros_loop()

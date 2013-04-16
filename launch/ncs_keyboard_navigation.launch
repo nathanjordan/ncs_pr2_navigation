@@ -1,4 +1,5 @@
 <launch>
+    <include file="$(find ncs_pr2_navigation)/machine/$(env ROBOT).machine" />
     <node pkg="ncs_pr2_navigation" type="KeyboardNavigation" name="ncs_navigation" output="screen">
       <remap from="cmd_vel" to="base_controller/command" />
 
